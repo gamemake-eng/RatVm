@@ -6,10 +6,17 @@
 } Stack;*/
 
 void stack_push(Stack* s, Uint16 v){
+	if(s->ptr > 255){
+		printf("Stack overflow");
+	}
 	s->data[s->ptr] = v;
 	s->ptr++;
 }
 Uint16 stack_pop(Stack* s){
+	if(s->ptr < 0){
+		printf("Stack underflow");
+		return 0;
+	}
 	s->ptr--;
 	return s->data[s->ptr];
 }
@@ -45,7 +52,7 @@ Uint16 mem_get(MemBus* mem, Uint16 addr){
 	return mem->ram[addr];
 }
 Uint16 mem_load(MemBus* mem, Uint16* data, Uint16 start){
-	int len = sizeof(data) / sizeof(data[0]);
+	int len = *(&data + 1) - data;
 	for(int i = 0; i < len; i++){
 		mem->ram[start+i] = data[i];
 	}
@@ -66,6 +73,24 @@ Uint16 mem_load(MemBus* mem, Uint16* data, Uint16 start){
 
 } RatVm;*/
 
+void ratvm_new(RatVm* vm ,Uint16 int_addr){
+
+	vm->ws1.ptr = 0;
+	vm->ws2.ptr = 0;
+	vm->rs.ptr = 0;
+
+	vm->stack = 0;
+
+	vm->iv_addr = int_addr;
+	vm->isInInt = 0;
+	vm->IM = 0xFFFF;
+
+	vm->halt = 0;
+
+	vm->PC = 0;
+
+	
+}
 
 Stack* ratvm_get_stack(RatVm* vm){
 	if(vm->stack == 0){
@@ -85,6 +110,7 @@ void ratvm_restore_state(RatVm* vm){
 
 Uint16 ratvm_fetch(RatVm* vm){
 	Uint16 inst = mem_get(&vm->memory, vm->PC);
+	//printf("\nFetch:%d PC:%d\n", inst, vm->PC);
 	vm->PC++;
 	return inst;
 }
@@ -92,7 +118,7 @@ Uint16 ratvm_fetch(RatVm* vm){
 Uint16 ratvm_fetch_byte(RatVm* vm){
 	Uint16 v1 = ratvm_fetch(vm);
 	Uint16 v2 = ratvm_fetch(vm);
-	
+	//printf("\n%d %d %d\n",v1, v2, vm->PC);	
 	return (v1 << 8) + v2;
 }
 
@@ -131,6 +157,7 @@ void ratvm_rot_stack(RatVm* vm) {
 
 
 void ratvm_set_mem(RatVm* vm, Uint16 a, Uint16 v){
+	//printf("\nval:%d addr: %d\n", v,a);
 	mem_set(&vm->memory,v,a);
 }
 Uint16 ratvm_get_mem(RatVm* vm, Uint16 addr){
@@ -138,6 +165,7 @@ Uint16 ratvm_get_mem(RatVm* vm, Uint16 addr){
 }
 
 void ratvm_exe(RatVm* vm, Uint16 inst){
+	//printf("%d pc:%d\n ", inst, vm->PC);
 	switch(inst){
 	//Pushes literal value (msb, lsb) onto WS
 	//PSH msb lsb
@@ -288,6 +316,123 @@ void ratvm_exe(RatVm* vm, Uint16 inst){
 		
 		ratvm_push_stack(vm,~not1);
 		break;
+	//Left Shifts the top of WS by literal v
+	//LFS msb lsb
+	case LFS:
+		Uint16 lfs1 = ratvm_pop_stack(vm);
+		Uint16 lfsv = ratvm_fetch_byte(vm);
+		ratvm_push_stack(vm,lfs1<<lfsv);
+		break;
+	//Right Shifts the top of WS by literal v
+	//RTS msb lsb
+	case RTS:
+		Uint16 rts1 = ratvm_pop_stack(vm);
+		Uint16 rtsv = ratvm_fetch_byte(vm);
+		ratvm_push_stack(vm,lfs1<<lfsv);	
+		break;
+	//Increases the value on top of the WS by 1
+	//INC
+	case INC:
+		Uint16 inc1 = ratvm_pop_stack(vm);
+		ratvm_push_stack(vm,inc1+1);
+		break;
+	//Decreases the value on top of the WS by 1
+	//DEC
+	case DEC:
+		Uint16 dec1 = ratvm_pop_stack(vm);
+		ratvm_push_stack(vm,dec1-1);	
+		break;
+	//Saves the state to the RS and sets PC to the address at the top of the WS
+	//CAL
+	case CAL:
+		ratvm_save_state(vm);
+		vm->PC = ratvm_pop_stack(vm);
+		break;
+	//Restores the state from the RS
+	//RET
+	case RET:
+		ratvm_restore_state(vm);
+		break;
+	//Sets PC to the top of WS
+	//JMP
+	case JMP:
+		Uint16 jmpaddr = ratvm_pop_stack(vm);
+		vm->PC = jmpaddr;
+		break;
+	//Sets PC to literal value
+	//JML msb lsb
+	case JML:
+		Uint16 jmpl = ratvm_fetch_byte(vm);
+		vm->PC = jmpl;
+		break;
+	//Jumps to a if top of WS is equal to 1
+	//JPC msb lsb
+	case JPC:
+		Uint16 jmpc = ratvm_pop_stack(vm);
+		Uint16 jmpd = ratvm_fetch_byte(vm);
+		//console.log(a)
+		if (jmpc==1) {
+			vm->PC = jmpd;
+		}
+		
+		break;
+	//Trigger a interrupt
+	//INT a
+	case INT:
+		Uint16 intaddr = ratvm_fetch_byte(vm);
+		ratvm_handle_int(vm, intaddr);
+		break;
+	//Returns from interrupt
+	//RFI
+	case RFI:
+		vm->isInInt = 0;
+		ratvm_restore_state(vm);
+		break;
+	//Pushes 1 if the 1st and 2nd values on the WS are equal. else, it pushes 0
+	//EQU
+	case EQU:
+		Uint16 eqa = ratvm_pop_stack(vm);
+		Uint16 eqb = ratvm_pop_stack(vm);
+		if (eqa==eqb) {
+			ratvm_push_stack(vm,1);
+		}else{
+			ratvm_push_stack(vm,0);
+		}
+		break;
+	//Pushes 1 if the 1st and 2nd values on the WS are not equal. else, it pushes 0
+	//NEQ
+	case NEQ:
+		Uint16 neqa = ratvm_pop_stack(vm);
+		Uint16 neqb = ratvm_pop_stack(vm);
+		if (neqa!=neqb) {
+			ratvm_push_stack(vm,1);
+		}else{
+			ratvm_push_stack(vm,0);
+		}	
+		break;
+	//Pushes 1 if the 1st value of WS is greater than the second value on WS. else, it pushes 0
+	//GTH
+	case GTH:
+		Uint16 gta = ratvm_pop_stack(vm);
+		Uint16 gtb = ratvm_pop_stack(vm);
+		if (gta>gtb) {
+			ratvm_push_stack(vm,1);
+		}else{
+			ratvm_push_stack(vm,0);
+		}
+		break;
+	//Pushes 1 if the 1st value of WS is less than the second value on WS. else, it pushes 0
+	//LTH
+	case LTH:
+		Uint16 lta = ratvm_pop_stack(vm);
+		Uint16 ltb = ratvm_pop_stack(vm);
+		if (lta<ltb) {
+			ratvm_push_stack(vm,1);
+		}else{
+			ratvm_push_stack(vm,0);
+		}
+		
+		break;
 
 	case HLT:
 		vm->halt = 1;
@@ -296,6 +441,19 @@ void ratvm_exe(RatVm* vm, Uint16 inst){
 		break;
 	
 	
+	}
+}
+
+void ratvm_step(RatVm* vm){
+	ratvm_exe(vm, ratvm_fetch(vm));
+}
+
+void ratvm_run(RatVm* vm){
+	
+	while(vm->halt==0){
+		//for(int dd = 5; dd>=0; dd--){
+			ratvm_step(vm);
+		//}
 	}
 }
 

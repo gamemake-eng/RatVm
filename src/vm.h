@@ -80,6 +80,7 @@ typedef struct RatVm {
 
 } RatVm;
 
+void ratvm_new(RatVm* vm, Uint16 int_addr);
 Stack* ratvm_get_stack(RatVm* vm);
 void ratvm_save_state(RatVm* vm);
 void ratvm_restore_state(RatVm* vm);
@@ -87,3 +88,5 @@ Uint16 ratvm_fetch(RatVm* vm);
 Uint16 ratvm_fetch_byte(RatVm* vm);
 void ratvm_handle_int(RatVm* vm, Uint16 i);
 void ratvm_exe(RatVm* vm, Uint16 inst);
+void ratvm_step(RatVm *vm);
+void ratvm_run(RatVm *vm);
