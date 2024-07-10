@@ -65,7 +65,7 @@ Uint16 mem_get(MemBus* mem, Uint16 addr);
 Uint16 mem_load(MemBus* mem, Uint16* data, Uint16 start);
 
 
-/*typedef struct {
+typedef struct RatVm {
 	Stack ws1, ws2, rs;
 	MemBus memory;
 	int stack;
@@ -78,4 +78,12 @@ Uint16 mem_load(MemBus* mem, Uint16* data, Uint16 start);
 
 	int halt;
 
-} Ratvm;*/
+} RatVm;
+
+Stack* ratvm_get_stack(RatVm* vm);
+void ratvm_save_state(RatVm* vm);
+void ratvm_restore_state(RatVm* vm);
+Uint16 ratvm_fetch(RatVm* vm);
+Uint16 ratvm_fetch_byte(RatVm* vm);
+void ratvm_handle_int(RatVm* vm, Uint16 i);
+void ratvm_exe(RatVm* vm, Uint16 inst);

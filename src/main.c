@@ -4,8 +4,6 @@
 int main() {
 	Stack stack;
 	MemBus mem;
-
-	stack.ptr = 0;
 	
 	printf("Testing stack\n");
 	stack_push(&stack, 100);
