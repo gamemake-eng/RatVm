@@ -44,6 +44,8 @@ typedef unsigned short Uint16;
 #define NEQ 0x41
 #define GTH 0x42
 #define LTH 0x43
+#define DST 0x44
+#define DRE 0x45
 #define HLT 0xFF
 
 typedef struct Stack {
@@ -57,13 +59,14 @@ void stack_rot(Stack* s);
 void stack_swap(Stack* s);
 
 typedef struct MemBus {
-	Uint16 ram[0xffff];
+	Uint16 ram[0xffff], serial[0x100];
 } MemBus;
 
 void mem_set(MemBus* mem, Uint16 v, Uint16 addr);
 Uint16 mem_get(MemBus* mem, Uint16 addr);
 Uint16 mem_load(MemBus* mem, Uint16* data, Uint16 start);
-
+void dev_set(MemBus* mem, Uint16 v, Uint16 port);
+Uint16 dev_get(MemBus* mem, Uint16 port);
 
 typedef struct RatVm {
 	Stack ws1, ws2, rs;

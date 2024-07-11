@@ -39,14 +39,14 @@ void stack_swap(Stack* s){
 }
 
 /*typedef struct {
-	Uint16 ram[0xffff];
+	Uint16 ram[0xffff], serial[0x100];
 } MemBus;*/
 
 void mem_set(MemBus* mem, Uint16 v, Uint16 addr){
 	mem->ram[addr] = v;
-	switch(addr) {
+	/*switch(addr) {
 		case 0x19: fputc(mem->ram[0x19], stdout), fflush(stdout); return;
-	}
+	}*/
 }
 Uint16 mem_get(MemBus* mem, Uint16 addr){
 	return mem->ram[addr];
@@ -56,6 +56,15 @@ Uint16 mem_load(MemBus* mem, Uint16* data, Uint16 start){
 	for(int i = 0; i < len; i++){
 		mem->ram[start+i] = data[i];
 	}
+}
+void dev_set(MemBus* mem, Uint16 v, Uint16 port){
+	mem->serial[port] = v;
+	switch(port){
+		case 0x19: fputc(mem->serial[0x19], stdout); fflush(stdout); return;
+	}
+}
+Uint16 dev_get(MemBus* mem, Uint16 port){
+	return mem->serial[port];
 }
 
 /*typedef struct RatVm {
@@ -164,6 +173,13 @@ Uint16 ratvm_get_mem(RatVm* vm, Uint16 addr){
 	return mem_get(&vm->memory,addr);
 }
 
+void ratvm_set_dev(RatVm* vm, Uint16 port, Uint16 v){
+	dev_set(&vm->memory,v,port);
+}
+Uint16 ratvm_get_dev(RatVm* vm, Uint16 port){
+	return dev_get(&vm->memory,port);
+}
+
 void ratvm_exe(RatVm* vm, Uint16 inst){
 	//printf("%d pc:%d\n ", inst, vm->PC);
 	switch(inst){
@@ -209,6 +225,21 @@ void ratvm_exe(RatVm* vm, Uint16 inst){
 		Uint16 o = ratvm_pop_stack(vm);
 		ratvm_set_mem(vm,a+o,v);
 		break;
+	//Writes top of WS to serial port a
+	//DST a
+	case DST:
+		Uint16 dev_st = ratvm_pop_stack(vm);
+		Uint16 dev_st_p = ratvm_fetch_byte(vm);
+		ratvm_set_dev(vm,dev_st_p,dev_st);
+		break;
+	//Pushes value of serial port a to top of WS
+	//DRE a
+	case DRE:
+		Uint16 dev_re_p = ratvm_fetch_byte(vm);
+		ratvm_push_stack(vm,ratvm_get_dev(vm,dev_re_p));
+		break;
+
+
 	//Swaps last 2 values on WS
 	//SWP
 	case SWP:

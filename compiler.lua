@@ -273,6 +273,9 @@ local opcodes = {
 	GTH=0x42,
 	LTH=0x43,
 
+	DST=0x44,
+	DRE=0x45,
+
 	HLT= 0xFF
 }
 
