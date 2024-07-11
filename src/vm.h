@@ -63,9 +63,6 @@ typedef struct MemBus {
 	Uint16 ram[0xffff], serial[0x100];
 } MemBus;
 
-void handle_write(MemBus* mem, Uint16 port);
-Uint16 handle_read(MemBus* mem, Uint16 port);
-
 void mem_set(MemBus* mem, Uint16 v, Uint16 addr);
 Uint16 mem_get(MemBus* mem, Uint16 addr);
 Uint16 mem_load(MemBus* mem, Uint16* data, Uint16 start);
