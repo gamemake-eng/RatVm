@@ -11,5 +11,5 @@ HLT
 
 %func
 	PSHL "A
-	STO $19
+	DST $19
 	RET
