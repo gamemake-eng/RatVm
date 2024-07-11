@@ -42,6 +42,9 @@ void stack_swap(Stack* s){
 	Uint16 ram[0xffff], serial[0x100];
 } MemBus;*/
 
+
+
+
 void mem_set(MemBus* mem, Uint16 v, Uint16 addr){
 	mem->ram[addr] = v;
 	/*switch(addr) {
@@ -62,6 +65,7 @@ void dev_set(MemBus* mem, Uint16 v, Uint16 port){
 	switch(port){
 		case 0x19: fputc(mem->serial[0x19], stdout); fflush(stdout); return;
 	}
+	
 }
 Uint16 dev_get(MemBus* mem, Uint16 port){
 	return mem->serial[port];
