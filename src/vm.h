@@ -60,7 +60,12 @@ void stack_swap(Stack* s);
 
 
 typedef struct MemBus {
-	Uint16 ram[0xffff], serial[0x100];
+	Uint16 serial[0x100];
+	void (*serial_write_handler)(Uint16 value, Uint16 addr);
+	Uint16 (*serial_read_handler)(Uint16 addr);
+	void (*memory_write_handler)(Uint16 value, Uint16 addr);
+	Uint16 (*memory_read_handler)(Uint16 addr);
+
 } MemBus;
 
 void mem_set(MemBus* mem, Uint16 v, Uint16 addr);
